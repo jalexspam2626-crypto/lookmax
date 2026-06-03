@@ -3,12 +3,19 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Camera, Upload, RefreshCw, Zap, ShieldCheck, Target, Scan } from "lucide-react";
+import { Camera, Upload, RefreshCw, Zap, ShieldCheck, Target, Scan, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { calculateLookmaxxingMetrics, Landmark } from "@/lib/facial-analysis";
+
+declare global {
+    interface Window {
+        FaceMesh: any;
+    }
+}
 
 interface ScannerProps {
-    onScan: (image: string) => void;
+    onScan: (image: string, localResults?: any) => void;
     isProcessing: boolean;
 }
 
@@ -35,8 +42,14 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [messageIndex, setMessageIndex] = useState(0);
     const [liveMessageIndex, setLiveMessageIndex] = useState(0);
+    const [faceMeshResults, setFaceMeshResults] = useState<any>(null);
+    const [isMeshLoading, setIsMeshLoading] = useState(true);
+
     const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const faceMeshRef = useRef<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const requestRef = useRef<number>(null);
 
     useEffect(() => {
         if (mode === "camera") {
@@ -46,6 +59,63 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
         }
         return () => stopCamera();
     }, [mode]);
+
+    useEffect(() => {
+        const loadScripts = async () => {
+            if (window.FaceMesh) {
+                initMesh();
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
+            script.async = true;
+            script.onload = () => initMesh();
+            document.head.appendChild(script);
+        };
+
+        const initMesh = () => {
+            const faceMesh = new window.FaceMesh({
+                locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+            });
+
+            faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5,
+            });
+
+            faceMesh.onResults((results: any) => {
+                setFaceMeshResults(results);
+            });
+
+            faceMeshRef.current = faceMesh;
+            setIsMeshLoading(false);
+        };
+
+        loadScripts();
+
+        return () => {
+            if (faceMeshRef.current) faceMeshRef.current.close();
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (mode === "camera" && stream && !isProcessing) {
+            const processVideo = async () => {
+                if (videoRef.current && videoRef.current.readyState >= 2 && faceMeshRef.current) {
+                    await faceMeshRef.current.send({ image: videoRef.current });
+                }
+                requestRef.current = requestAnimationFrame(processVideo);
+            };
+            processVideo();
+        }
+        return () => {
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        };
+    }, [mode, stream, isProcessing]);
 
     useEffect(() => {
         if (isProcessing) {
@@ -90,7 +160,17 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
             if (ctx) {
                 ctx.drawImage(videoRef.current, 0, 0);
                 const dataUrl = canvas.toDataURL("image/jpeg");
-                onScan(dataUrl);
+
+                let localResults = null;
+                if (faceMeshResults?.multiFaceLandmarks?.[0]) {
+                    try {
+                        localResults = calculateLookmaxxingMetrics(faceMeshResults.multiFaceLandmarks[0]);
+                    } catch (e) {
+                        console.error("Local analysis failed:", e);
+                    }
+                }
+
+                onScan(dataUrl, localResults);
             }
         }
     };
@@ -202,16 +282,29 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
 
                             {/* Facial Landmark Points */}
                             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                                {mockLandmarks.map((point, i) => (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: [0, 1, 0.5, 1] }}
-                                        transition={{ delay: i * 0.1, repeat: Infinity, duration: 2 }}
-                                        className="landmark-dot"
-                                        style={{ left: `${point.x}%`, top: `${point.y}%` }}
-                                    />
-                                ))}
+                                {faceMeshResults?.multiFaceLandmarks?.[0] ? (
+                                    faceMeshResults.multiFaceLandmarks[0].map((point: any, i: number) => (
+                                        // only show key landmarks to avoid clutter (every 10th point)
+                                        i % 12 === 0 && (
+                                            <motion.div
+                                                key={i}
+                                                className="landmark-dot"
+                                                style={{ left: `${point.x * 100}%`, top: `${point.y * 100}%` }}
+                                            />
+                                        )
+                                    ))
+                                ) : (
+                                    mockLandmarks.map((point, i) => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: [0, 1, 0.5, 1] }}
+                                            transition={{ delay: i * 0.1, repeat: Infinity, duration: 2 }}
+                                            className="landmark-dot"
+                                            style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                                        />
+                                    ))
+                                )}
                             </div>
 
                             {/* Vertical Symmetry Line */}

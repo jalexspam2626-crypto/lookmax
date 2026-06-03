@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Scan, Sparkles, BrainCircuit, ShieldCheck, ArrowLeft,
   Target, Zap, Maximize, Smartphone, Cpu, FileText,
-  Lock, EyeOff, Upload, CheckCircle2, Info, Sun, Moon
+  Lock, EyeOff, Upload, CheckCircle2, Info, Sun, Moon, Activity
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import Scanner from "@/components/Scanner";
@@ -20,15 +20,36 @@ export default function Home() {
   const [hasScanned, setHasScanned] = useState(false);
   const scannerRef = useRef<HTMLDivElement>(null);
 
-  const handleScan = async (image: string) => {
+  const handleScan = async (image: string, localResults?: any) => {
     setIsProcessing(true);
     setHasScanned(true);
+
+    // Initial results from local analysis
+    if (localResults) {
+      setResults({
+        score: localResults.score,
+        title: "Analyzing Structure...",
+        tierMeaning: "Calculating aesthetic geometry...",
+        summary: "Live spatial mapping complete. Synchronizing with neural processing...",
+        confidenceScore: 92,
+        metrics: [
+          { label: "Jawline Definition", value: localResults.jawlineDefinition > 80 ? "Sharp" : "Soft", numericalValue: `${Math.round(localResults.jawlineDefinition)}%`, score: Math.round(localResults.jawlineDefinition), percentile: 72, coords: { x: 50, y: 85 } },
+          { label: "Eye Symmetry", value: localResults.symmetry > 95 ? "High" : "Average", numericalValue: `${Math.round(localResults.symmetry)}%`, score: Math.round(localResults.symmetry), percentile: 88, coords: { x: 50, y: 35 } },
+          { label: "Canthal Tilt", value: localResults.canthalTilt > 0 ? "Positive" : "Neutral", numericalValue: `${localResults.canthalTilt.toFixed(1)}°`, score: 75 + localResults.canthalTilt * 2, percentile: 65, coords: { x: 35, y: 35 } },
+          { label: "Mid-face Ratio", value: localResults.midFaceRatio.toFixed(2), numericalValue: localResults.midFaceRatio.toFixed(2), score: 85, percentile: 78, coords: { x: 50, y: 55 } },
+        ],
+        pros: ["Strong spatial symmetry detected", "Defined facial thirds"],
+        cons: ["Processing deeper neural insights..."],
+        capturedImage: image,
+        isMock: true
+      });
+    }
 
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image }),
+        body: JSON.stringify({ image, localResults }),
       });
 
       if (!response.ok) throw new Error("Analysis failed");

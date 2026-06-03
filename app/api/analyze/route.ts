@@ -3,7 +3,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/ge
 
 export async function POST(req: Request) {
   try {
-    const { image } = await req.json();
+    const { image, localResults } = await req.json();
 
     if (!image) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
 
     const prompt = `
       Analyze this face for specialized "lookmaxxing" structural metrics. 
+      ${localResults ? `A local geometric scan has already been performed with these results: ${JSON.stringify(localResults)}. Use these as a objective baseline for your qualitative analysis.` : ""}
       Identify 6 key facial metrics (Jawline Definition, Eye Symmetry, Mid-face Ratio, Canthal Tilt, Chin Projection, Brow Ridge).
 
       Return ONLY a JSON object with this exact structure:
