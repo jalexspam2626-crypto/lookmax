@@ -3,8 +3,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, AlertCircle, Award, TrendingUp, Info, Activity, Target, ShieldCheck, Zap, ChevronDown, ChevronUp } from "lucide-react";
-import { motion, useSpring, useTransform, animate, AnimatePresence } from "framer-motion";
+import { CheckCircle2, AlertCircle, Info, Activity, Target, ShieldCheck, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { motion, animate, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface Metric {
@@ -27,6 +27,7 @@ interface AnalysisResultsProps {
         summary: string;
         confidenceScore: number;
         capturedImage?: string;
+        qualityWarnings?: string[];
         error?: string;
         details?: string;
         isMock?: boolean;
@@ -160,11 +161,29 @@ export default function AnalysisResults({ results }: AnalysisResultsProps) {
                             {results.tierMeaning}
                         </p>
                         <p className="text-foreground/50 text-lg leading-relaxed italic font-medium max-w-xl">
-                            "{results.summary}"
+                            {results.summary}
                         </p>
                     </div>
                 </div>
             </motion.div>
+
+            {results.qualityWarnings && results.qualityWarnings.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-yellow-500/10 border border-yellow-500/25 rounded-2xl p-5 flex gap-4 text-yellow-300 text-sm backdrop-blur-md"
+                >
+                    <AlertCircle className="shrink-0 mt-0.5" size={20} />
+                    <div className="space-y-2">
+                        <p className="font-bold uppercase tracking-widest text-[11px]">Capture quality warning</p>
+                        <ul className="space-y-1 text-foreground/60">
+                            {results.qualityWarnings.map((warning, index) => (
+                                <li key={index}>{warning}</li>
+                            ))}
+                        </ul>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Face Map Visualization */}
             {results.capturedImage && (
