@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Scan, Sparkles, BrainCircuit, ShieldCheck, ArrowLeft,
@@ -12,6 +12,7 @@ import {
 import { useTheme } from "@/components/ThemeProvider";
 import Scanner from "@/components/Scanner";
 import AnalysisResults from "@/components/AnalysisResults";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
@@ -19,6 +20,34 @@ export default function Home() {
   const [results, setResults] = useState<any>(null);
   const [hasScanned, setHasScanned] = useState(false);
   const scannerRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState("hero");
+
+  useEffect(() => {
+    const sections = ["hero", "features", "how-it-works", "privacy"];
+    const observers = sections.map(id => {
+      const element = document.getElementById(id);
+      if (!element) return null;
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveSection(id);
+          }
+        },
+        {
+          threshold: 0.1,
+          rootMargin: "-20% 0px -70% 0px"
+        }
+      );
+
+      observer.observe(element);
+      return observer;
+    });
+
+    return () => {
+      observers.forEach(observer => observer?.disconnect());
+    };
+  }, []);
 
   const handleScan = async (image: string, localResults?: any) => {
     setIsProcessing(true);
@@ -82,30 +111,56 @@ export default function Home() {
       <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-accent/5 dark:bg-accent/5 blur-[120px] rounded-full -z-10 opacity-50 dark:opacity-100" />
 
       {/* Header */}
-      <nav className="container mx-auto px-6 py-8 flex justify-between items-center relative z-50">
-        <div className="flex items-center gap-2 group cursor-pointer" onClick={reset}>
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-            <Scan className="text-white" size={20} />
+      <nav className="fixed top-0 left-0 right-0 z-[100] backdrop-blur-xl bg-background/80 border-b border-foreground/5 py-4 transition-all duration-300">
+        <div className="container mx-auto px-6 flex justify-between items-center">
+          <div className="flex items-center gap-2 group cursor-pointer" onClick={reset}>
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)]">
+              <Scan className="text-white" size={20} />
+            </div>
+            <span className="text-xl font-bold tracking-tight">LOOK<span className="text-primary uppercase">Max</span></span>
           </div>
-          <span className="text-xl font-bold tracking-tight">LOOK<span className="text-primary uppercase">Max</span></span>
-        </div>
-        <div className="hidden md:flex items-center gap-8 text-xs text-white/40 uppercase tracking-widest font-bold">
-          <a href="#features" className="hover:text-white transition-colors">Technology</a>
-          <a href="#how-it-works" className="hover:text-white transition-colors">Methodology</a>
-          <a href="#privacy" className="hover:text-white transition-colors">Privacy</a>
-          <button
-            onClick={toggleTheme}
-            className="p-2.5 bg-foreground/5 dark:bg-white/5 rounded-full hover:bg-foreground/10 dark:hover:bg-white/10 transition-colors border border-foreground/10 dark:border-white/10 text-foreground dark:text-white flex items-center justify-center"
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <button
-            onClick={scrollToScanner}
-            className="px-5 py-2.5 bg-foreground/5 dark:bg-white/5 rounded-full hover:bg-foreground/10 dark:hover:bg-white/10 transition-colors border border-foreground/10 dark:border-white/10 text-foreground dark:text-white"
-          >
-            Analyze Now
-          </button>
+          <div className="hidden md:flex items-center gap-8 text-xs uppercase tracking-widest font-black">
+            <a
+              href="#features"
+              className={cn(
+                "transition-all duration-300 hover:text-primary",
+                activeSection === "features" ? "text-primary scale-110" : "text-foreground/40 dark:text-white/40"
+              )}
+            >
+              Technology
+            </a>
+            <a
+              href="#how-it-works"
+              className={cn(
+                "transition-all duration-300 hover:text-primary",
+                activeSection === "how-it-works" ? "text-primary scale-110" : "text-foreground/40 dark:text-white/40"
+              )}
+            >
+              Methodology
+            </a>
+            <a
+              href="#privacy"
+              className={cn(
+                "transition-all duration-300 hover:text-primary",
+                activeSection === "privacy" ? "text-primary scale-110" : "text-foreground/40 dark:text-white/40"
+              )}
+            >
+              Privacy
+            </a>
+            <button
+              onClick={toggleTheme}
+              className="p-2.5 bg-foreground/5 dark:bg-white/5 rounded-full hover:bg-foreground/10 dark:hover:bg-white/10 transition-colors border border-foreground/10 dark:border-white/10 text-foreground dark:text-white flex items-center justify-center"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              onClick={scrollToScanner}
+              className="px-5 py-2.5 bg-foreground/5 dark:bg-white/5 rounded-full hover:bg-foreground/10 dark:hover:bg-white/10 transition-colors border border-foreground/10 dark:border-white/10 text-foreground dark:text-white"
+            >
+              Analyze Now
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -120,7 +175,7 @@ export default function Home() {
               className="space-y-32"
             >
               {/* Hero Section */}
-              <section className="text-center max-w-4xl mx-auto space-y-10 pt-10">
+              <section id="hero" className="text-center max-w-4xl mx-auto space-y-10 pt-10 scroll-mt-32">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -174,10 +229,10 @@ export default function Home() {
                   transition={{ delay: 0.4 }}
                   className="space-y-4"
                 >
-                  <p className="text-sm text-white/30 font-medium tracking-wide">
+                  <p className="text-sm text-foreground/30 dark:text-white/30 font-medium tracking-wide">
                     Instant results • No signup required
                   </p>
-                  <div className="flex items-center justify-center gap-2 text-xs text-white/20 uppercase tracking-widest font-bold">
+                  <div className="flex items-center justify-center gap-2 text-xs text-foreground/20 dark:text-white/20 uppercase tracking-widest font-bold">
                     <CheckCircle2 size={12} className="text-primary" />
                     Used for personal improvement, grooming, and self-analysis
                   </div>
@@ -242,7 +297,7 @@ export default function Home() {
               </section>
 
               {/* Features Section */}
-              <section id="features" className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              <section id="features" className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto scroll-mt-32">
                 {[
                   {
                     icon: BrainCircuit,
@@ -270,7 +325,7 @@ export default function Home() {
                       <feature.icon size={24} />
                     </div>
                     <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                    <p className="text-white/40 leading-relaxed">{feature.desc}</p>
+                    <p className="text-foreground/40 dark:text-white/40 leading-relaxed">{feature.desc}</p>
                   </div>
                 ))}
               </section>
@@ -279,24 +334,24 @@ export default function Home() {
               <section id="how-it-works" className="space-y-16 py-12">
                 <div className="text-center space-y-4">
                   <h2 className="text-4xl font-bold">How It Works</h2>
-                  <p className="text-white/40">Sophisticated analysis in three simple steps.</p>
+                  <p className="text-foreground/40 dark:text-white/40">Sophisticated analysis in three simple steps.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto relative">
                   {/* Progress line */}
-                  <div className="hidden md:block absolute top-12 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent -z-10" />
+                  <div className="hidden md:block absolute top-12 left-0 w-full h-px bg-gradient-to-r from-transparent via-foreground/10 dark:via-white/10 to-transparent -z-10" />
                   {[
                     { step: "01", icon: Smartphone, title: "Scan or Upload", desc: "Use your camera for a live scan or upload a clear portrait." },
                     { step: "02", icon: Cpu, title: "AI Maps Your Face", desc: "Our neural network detects 128+ structural landmarks." },
                     { step: "03", icon: FileText, title: "Get Detailed Breakdown", desc: "Receive a professional report on your facial metrics." }
                   ].map((item, i) => (
                     <div key={i} className="text-center space-y-6">
-                      <div className="relative mx-auto w-24 h-24 rounded-full bg-background border border-white/10 flex items-center justify-center text-primary group hover:border-primary/50 transition-all">
+                      <div className="relative mx-auto w-24 h-24 rounded-full bg-background border border-foreground/10 dark:border-white/10 flex items-center justify-center text-primary group hover:border-primary/50 transition-all">
                         <span className="absolute -top-2 -right-2 text-[10px] font-bold bg-primary text-white px-2 py-1 rounded-full">{item.step}</span>
                         <item.icon size={32} />
                       </div>
                       <div className="space-y-2">
                         <h3 className="text-xl font-bold">{item.title}</h3>
-                        <p className="text-sm text-white/40 leading-relaxed px-4">{item.desc}</p>
+                        <p className="text-sm text-foreground/40 dark:text-white/40 leading-relaxed px-4">{item.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -304,8 +359,8 @@ export default function Home() {
               </section>
 
               {/* Privacy Section */}
-              <section id="privacy" className="max-w-4xl mx-auto">
-                <div className="glass-card p-12 text-center space-y-8 bg-gradient-to-b from-white/[0.02] to-transparent">
+              <section id="privacy" className="max-w-4xl mx-auto scroll-mt-32">
+                <div className="glass-card p-12 text-center space-y-8 bg-gradient-to-b from-foreground/[0.02] dark:from-white/[0.02] to-transparent">
                   <div className="flex justify-center gap-6">
                     <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                       <Lock size={28} />
@@ -319,8 +374,9 @@ export default function Home() {
                   </div>
                   <div className="space-y-4">
                     <h2 className="text-3xl font-bold">Your Privacy is Mandatory</h2>
-                    <p className="text-white/50 max-w-md mx-auto leading-relaxed">
+                    <p className="text-foreground/50 dark:text-white/50 max-w-md mx-auto leading-relaxed">
                       Your images are processed securely in real-time and items are never stored on our servers.
+                      Photos are not saved and so don't want be deleted.
                       Complete encryption for every analysis.
                     </p>
                   </div>
@@ -339,7 +395,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={scrollToScanner}
-                    className="w-full sm:w-auto px-10 py-5 bg-white/5 text-white border border-white/10 rounded-2xl font-bold text-lg hover:bg-white/10 transition-all"
+                    className="w-full sm:w-auto px-10 py-5 bg-foreground/5 dark:bg-white/5 text-foreground dark:text-white border border-foreground/10 dark:border-white/10 rounded-2xl font-bold text-lg hover:bg-foreground/10 dark:hover:bg-white/10 transition-all"
                   >
                     Upload Photo
                   </button>
@@ -357,12 +413,12 @@ export default function Home() {
               <div className="flex items-center justify-between max-w-4xl mx-auto mb-4">
                 <button
                   onClick={reset}
-                  className="flex items-center gap-2 text-white/40 hover:text-white transition-colors group"
+                  className="flex items-center gap-2 text-foreground/40 dark:text-white/40 hover:text-primary transition-colors group"
                 >
                   <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
                   New Analysis
                 </button>
-                <div className="text-xs text-white/20 uppercase tracking-widest font-bold">Report Generated</div>
+                <div className="text-xs text-foreground/20 dark:text-white/20 uppercase tracking-widest font-bold">Report Generated</div>
               </div>
 
               {isProcessing ? (
@@ -393,13 +449,13 @@ export default function Home() {
                   <div className="text-center space-y-6 max-w-md">
                     <div className="space-y-2">
                       <h3 className="text-4xl font-black tracking-tighter glow-text uppercase">Neural Processing</h3>
-                      <p className="text-white/40 text-xs font-bold tracking-[0.4em] uppercase">Deep Structural Analysis In Progress</p>
+                      <p className="text-foreground/40 dark:text-white/40 text-xs font-bold tracking-[0.4em] uppercase">Deep Structural Analysis In Progress</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 pt-8 border-t border-white/5">
+                    <div className="grid grid-cols-2 gap-4 pt-8 border-t border-foreground/5 dark:border-white/5">
                       <div className="space-y-1">
-                        <div className="text-[10px] text-white/20 font-black uppercase tracking-widest">Symmetry Engaged</div>
-                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div className="text-[10px] text-foreground/20 dark:text-white/20 font-black uppercase tracking-widest">Symmetry Engaged</div>
+                        <div className="h-1 w-full bg-foreground/5 dark:bg-white/5 rounded-full overflow-hidden">
                           <motion.div
                             className="h-full bg-primary"
                             animate={{ width: ["0%", "100%", "40%", "90%"] }}
@@ -408,8 +464,8 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-[10px] text-white/20 font-black uppercase tracking-widest">Ratio Compiling</div>
-                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div className="text-[10px] text-foreground/20 dark:text-white/20 font-black uppercase tracking-widest">Ratio Compiling</div>
+                        <div className="h-1 w-full bg-foreground/5 dark:bg-white/5 rounded-full overflow-hidden">
                           <motion.div
                             className="h-full bg-accent"
                             animate={{ width: ["0%", "70%", "20%", "100%"] }}
@@ -432,9 +488,9 @@ export default function Home() {
         </AnimatePresence>
       </div>
 
-      <footer className="py-12 border-t border-white/5 text-center space-y-4">
-        <div className="text-lg font-bold tracking-tight text-white/20 uppercase">LOOK<span className="text-primary/20">Max</span></div>
-        <p className="text-white/10 text-[10px] uppercase tracking-[0.4em] font-bold">
+      <footer className="py-12 border-t border-foreground/5 dark:border-white/5 text-center space-y-4">
+        <div className="text-lg font-bold tracking-tight text-foreground/20 dark:text-white/20 uppercase">LOOK<span className="text-primary/20">Max</span></div>
+        <p className="text-foreground/10 dark:text-white/10 text-[10px] uppercase tracking-[0.4em] font-bold">
           Scientific Structural Intelligence • © 2026
         </p>
       </footer>

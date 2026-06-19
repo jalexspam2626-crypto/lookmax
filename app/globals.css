@@ -13,14 +13,14 @@
 }
 
 .light {
-  --background: #f8fafc;
+  --background: #ffffff;
   --foreground: #0f172a;
   --primary: #2563eb;
   --accent: #3b82f6;
-  --accent-glow: rgba(37, 99, 235, 0.15);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(0, 0, 0, 0.1);
-  --glass-hover-bg: rgba(255, 255, 255, 0.9);
+  --accent-glow: rgba(37, 99, 235, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-hover-bg: rgba(255, 255, 255, 0.95);
   --card-border: rgba(37, 99, 235, 0.1);
 }
 
