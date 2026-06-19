@@ -10,11 +10,13 @@ export interface FacialMetrics {
     qualityWarnings: string[];
     symmetry: number;
     midFaceRatio: number;
+    midFaceScore: number;
     canthalTilt: number;
     canthalTiltScore: number;
     jawlineDefinition: number;
     browRidge: number;
     proportions: number;
+    fWHRScore: number;
     faceWidth: number;
     faceHeight: number;
     jawAngle: number;
@@ -60,6 +62,16 @@ function calibrateOverallScore(rawScore: number): number {
     }
 
     return Math.round(75 + (clampedRawScore - 50) * 0.38);
+}
+
+function calibrateMetricScore(rawScore: number): number {
+    const clampedRawScore = clamp(rawScore, 0, 100);
+
+    if (clampedRawScore < 50) {
+        return Math.round(42 + clampedRawScore * 0.4);
+    }
+
+    return Math.round(62 + (clampedRawScore - 50) * 0.76);
 }
 
 export function getFaceRotation(
@@ -192,9 +204,10 @@ export function calculateLookmaxxingMetrics(landmarks: Landmark[]): FacialMetric
         const deviation =
             Math.abs(value - ideal);
 
-        return Math.max(
+        return clamp(
+            100 - (deviation / tolerance) * 100,
             0,
-            100 - (deviation / tolerance) * 100
+            100
         );
     };
     const captureQuality = getCaptureQuality(landmarks);
@@ -250,9 +263,8 @@ for (const [leftIdx, rightIdx] of symmetryPairs) {
 }
 
 const symmetry =
-    Math.max(
-        0,
-        100 - totalError * 300
+    calibrateMetricScore(
+        100 - totalError * 240
     );
 
     // 2. Canthal Tilt (Inner vs Outer Canthus)
@@ -279,10 +291,12 @@ const symmetry =
     ) / 2;
 
     const canthalTiltScore =
-    normalizeScore(
-        avgTilt,
-        5,
-        8
+    calibrateMetricScore(
+        normalizeScore(
+            avgTilt,
+            5,
+            10
+        )
     );
 
     // 3. Mid-face Ratio (Width / Height)
@@ -294,6 +308,15 @@ const symmetry =
     const midFaceBottom = alignedLandmarks[2]; // Subnasale
     const midFaceHeight = dist(midFaceTop, midFaceBottom);
     const midFaceRatio = midFaceHeight > 0 ? midFaceWidth / midFaceHeight : 0;
+
+    const midFaceScore =
+        calibrateMetricScore(
+            normalizeScore(
+                midFaceRatio,
+                2.35,
+                1.25
+            )
+        );
 
     const faceWidth =
     dist(
@@ -311,10 +334,12 @@ const symmetry =
         faceWidth / faceHeight;
 
     const fWHRScore =
-        normalizeScore(
-            fWHR,
-            0.82,
-            0.25
+        calibrateMetricScore(
+            normalizeScore(
+                fWHR,
+                0.82,
+                0.35
+            )
         );
 
     const upperThird =
@@ -336,19 +361,21 @@ const symmetry =
         );
 
     const thirdsBalance =
-    (
-        normalizeScore(
-            upperThird / middleThird,
-            1,
-            0.3
-        )
-        +
-        normalizeScore(
-            middleThird / lowerThird,
-            1,
-            0.3
-        )
-    ) / 2;
+    calibrateMetricScore(
+        (
+            normalizeScore(
+                upperThird / middleThird,
+                1,
+                0.45
+            )
+            +
+            normalizeScore(
+                middleThird / lowerThird,
+                1,
+                0.45
+            )
+        ) / 2
+    );
     // 4. Jawline Definition (Angle at Gonion) - Rough estimate using lower jaw points
     const jawAngle =
         angleBetween(
@@ -358,10 +385,12 @@ const symmetry =
         );
 
     const jawlineDefinition =
-        normalizeScore(
-            jawAngle,
-            110,
-            30
+        calibrateMetricScore(
+            normalizeScore(
+                jawAngle,
+                118,
+                55
+            )
         );
     // 5. Total Score (Weighted average)
     const rawScore =
@@ -370,7 +399,7 @@ const symmetry =
         jawlineDefinition * 0.20 +
         canthalTiltScore * 0.15 +
         thirdsBalance * 0.20 +
-        fWHRScore * 0.20
+        midFaceScore * 0.20
     );
 
     return {
@@ -380,11 +409,13 @@ const symmetry =
         qualityWarnings: captureQuality.warnings,
         symmetry,
         midFaceRatio,
+        midFaceScore,
         canthalTilt: avgTilt,
         canthalTiltScore,
         jawlineDefinition,
         browRidge: thirdsBalance,
         proportions: fWHRScore,
+        fWHRScore,
 
         faceWidth,
         faceHeight,

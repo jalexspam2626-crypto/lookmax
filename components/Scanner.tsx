@@ -15,7 +15,7 @@ type FaceMeshResults = {
 type FaceMeshInstance = {
     setOptions: (options: Record<string, unknown>) => void;
     onResults: (callback: (results: FaceMeshResults) => void) => void;
-    send: (input: { image: HTMLVideoElement }) => Promise<void>;
+    send: (input: { image: HTMLVideoElement | HTMLImageElement }) => Promise<void>;
     close: () => void;
 };
 
@@ -222,12 +222,46 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
         }
     };
 
+    const waitForFaceMesh = async (): Promise<FaceMeshInstance | null> => {
+        const startedAt = performance.now();
+
+        while (!faceMeshRef.current && performance.now() - startedAt < 3000) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        return faceMeshRef.current;
+    };
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                onScan(reader.result as string);
+            reader.onloadend = async () => {
+                const dataUrl = reader.result as string;
+                let localResults: FacialMetrics | undefined;
+
+                try {
+                    const faceMesh = await waitForFaceMesh();
+                    if (!faceMesh) {
+                        throw new Error("FaceMesh was not ready");
+                    }
+
+                    const image = new Image();
+                    image.src = dataUrl;
+                    await image.decode();
+
+                    landmarkSamplesRef.current = [];
+                    await faceMesh.send({ image });
+
+                    const landmarks = landmarkSamplesRef.current.at(-1);
+                    if (landmarks) {
+                        localResults = calculateLookmaxxingMetrics(landmarks);
+                    }
+                } catch (error) {
+                    console.error("Upload local analysis failed:", error);
+                }
+
+                onScan(dataUrl, localResults);
             };
             reader.readAsDataURL(file);
         }

@@ -38,7 +38,7 @@ export default function Home() {
           { label: "Jawline Definition", value: localResults.jawlineDefinition > 80 ? "Sharp" : "Soft", numericalValue: `${Math.round(localResults.jawlineDefinition)}%`, score: Math.round(localResults.jawlineDefinition), percentile: 72, coords: { x: 50, y: 85 } },
           { label: "Eye Symmetry", value: localResults.symmetry > 95 ? "High" : "Average", numericalValue: `${Math.round(localResults.symmetry)}%`, score: Math.round(localResults.symmetry), percentile: 88, coords: { x: 50, y: 35 } },
           { label: "Canthal Tilt", value: localResults.canthalTilt > 0 ? "Positive" : "Neutral", numericalValue: `${localResults.canthalTilt.toFixed(1)}°`, score: Math.round(localResults.canthalTiltScore), percentile: 65, coords: { x: 35, y: 35 } },
-          { label: "Mid-face Ratio", value: localResults.midFaceRatio.toFixed(2), numericalValue: localResults.midFaceRatio.toFixed(2), score: Math.round(localResults.proportions), percentile: 78, coords: { x: 50, y: 55 } },
+          { label: "Mid-face Ratio", value: localResults.midFaceRatio.toFixed(2), numericalValue: localResults.midFaceRatio.toFixed(2), score: Math.round(localResults.midFaceScore), percentile: 78, coords: { x: 50, y: 55 } },
         ],
         pros: ["Strong spatial symmetry detected", "Defined facial thirds"],
         cons: ["Processing deeper neural insights..."],
