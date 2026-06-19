@@ -2,20 +2,31 @@
 
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
-import { Camera, Upload, RefreshCw, Zap, ShieldCheck, Target, Scan, Activity } from "lucide-react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
+import { Camera, Upload, Zap, ShieldCheck, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { calculateLookmaxxingMetrics, Landmark } from "@/lib/facial-analysis";
+import { calculateLookmaxxingMetrics, FacialMetrics, Landmark, medianLandmarks } from "@/lib/facial-analysis";
+
+type FaceMeshResults = {
+    multiFaceLandmarks?: Landmark[][];
+};
+
+type FaceMeshInstance = {
+    setOptions: (options: Record<string, unknown>) => void;
+    onResults: (callback: (results: FaceMeshResults) => void) => void;
+    send: (input: { image: HTMLVideoElement | HTMLImageElement }) => Promise<void>;
+    close: () => void;
+};
 
 declare global {
     interface Window {
-        FaceMesh: any;
+        FaceMesh: new (options: { locateFile: (file: string) => string }) => FaceMeshInstance;
     }
 }
 
 interface ScannerProps {
-    onScan: (image: string, localResults?: any) => void;
+    onScan: (image: string, localResults?: FacialMetrics) => void;
     isProcessing: boolean;
 }
 
@@ -37,28 +48,58 @@ const LIVE_SCAN_MESSAGES = [
     "READY FOR DEEP ANALYSIS"
 ];
 
+const LANDMARK_SAMPLE_TARGET = 24;
+const LANDMARK_SAMPLE_WINDOW_MS = 1200;
+
 export default function Scanner({ onScan, isProcessing }: ScannerProps) {
     const [mode, setMode] = useState<"camera" | "upload">("camera");
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [messageIndex, setMessageIndex] = useState(0);
     const [liveMessageIndex, setLiveMessageIndex] = useState(0);
-    const [faceMeshResults, setFaceMeshResults] = useState<any>(null);
-    const [isMeshLoading, setIsMeshLoading] = useState(true);
+    const [faceMeshResults, setFaceMeshResults] = useState<FaceMeshResults | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const faceMeshRef = useRef<any>(null);
+    const faceMeshRef = useRef<FaceMeshInstance | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const requestRef = useRef<number>(null);
+    const landmarkSamplesRef = useRef<Landmark[][]>([]);
+
+    const stopCamera = useCallback(() => {
+        setStream((currentStream) => {
+            currentStream?.getTracks().forEach((track) => track.stop());
+            return null;
+        });
+    }, []);
 
     useEffect(() => {
+        let isCancelled = false;
+
         if (mode === "camera") {
-            startCamera();
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+                .then((s) => {
+                    if (isCancelled) {
+                        s.getTracks().forEach((track) => track.stop());
+                        return;
+                    }
+
+                    setStream(s);
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = s;
+                    }
+                })
+                .catch((err) => {
+                    console.error("Error accessing camera:", err);
+                    setMode("upload");
+                });
         } else {
-            stopCamera();
+            queueMicrotask(stopCamera);
         }
-        return () => stopCamera();
-    }, [mode]);
+
+        return () => {
+            isCancelled = true;
+            stopCamera();
+        };
+    }, [mode, stopCamera]);
 
     useEffect(() => {
         const loadScripts = async () => {
@@ -86,12 +127,18 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                 minTrackingConfidence: 0.5,
             });
 
-            faceMesh.onResults((results: any) => {
+            faceMesh.onResults((results: FaceMeshResults) => {
+                const landmarks = results?.multiFaceLandmarks?.[0];
+                if (landmarks) {
+                    landmarkSamplesRef.current = [
+                        ...landmarkSamplesRef.current.slice(-(LANDMARK_SAMPLE_TARGET - 1)),
+                        landmarks
+                    ];
+                }
                 setFaceMeshResults(results);
             });
 
             faceMeshRef.current = faceMesh;
-            setIsMeshLoading(false);
         };
 
         loadScripts();
@@ -131,28 +178,21 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
         }
     }, [isProcessing, mode]);
 
-    const startCamera = async () => {
-        try {
-            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            setStream(s);
-            if (videoRef.current) {
-                videoRef.current.srcObject = s;
-            }
-        } catch (err) {
-            console.error("Error accessing camera:", err);
-            setMode("upload");
-        }
-    };
-
-    const stopCamera = () => {
-        if (stream) {
-            stream.getTracks().forEach((track) => track.stop());
-            setStream(null);
-        }
-    };
-
-    const capturePhoto = () => {
+    const capturePhoto = async () => {
         if (videoRef.current) {
+            landmarkSamplesRef.current = [];
+            const startedAt = performance.now();
+
+            while (
+                landmarkSamplesRef.current.length < LANDMARK_SAMPLE_TARGET &&
+                performance.now() - startedAt < LANDMARK_SAMPLE_WINDOW_MS
+            ) {
+                if (videoRef.current.readyState >= 2 && faceMeshRef.current) {
+                    await faceMeshRef.current.send({ image: videoRef.current });
+                }
+                await new Promise(resolve => requestAnimationFrame(resolve));
+            }
+
             const canvas = document.createElement("canvas");
             canvas.width = videoRef.current.videoWidth;
             canvas.height = videoRef.current.videoHeight;
@@ -161,12 +201,19 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                 ctx.drawImage(videoRef.current, 0, 0);
                 const dataUrl = canvas.toDataURL("image/jpeg");
 
-                let localResults = null;
-                if (faceMeshResults?.multiFaceLandmarks?.[0]) {
+                let localResults: FacialMetrics | undefined;
+                if (landmarkSamplesRef.current.length >= 8) {
+                    try {
+                        const stableLandmarks = medianLandmarks(landmarkSamplesRef.current);
+                        localResults = calculateLookmaxxingMetrics(stableLandmarks);
+                    } catch (e) {
+                        console.error("Local analysis failed:", e);
+                    }
+                } else if (faceMeshResults?.multiFaceLandmarks?.[0]) {
                     try {
                         localResults = calculateLookmaxxingMetrics(faceMeshResults.multiFaceLandmarks[0]);
                     } catch (e) {
-                        console.error("Local analysis failed:", e);
+                        console.error("Fallback local analysis failed:", e);
                     }
                 }
 
@@ -175,12 +222,46 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
         }
     };
 
+    const waitForFaceMesh = async (): Promise<FaceMeshInstance | null> => {
+        const startedAt = performance.now();
+
+        while (!faceMeshRef.current && performance.now() - startedAt < 3000) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        return faceMeshRef.current;
+    };
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                onScan(reader.result as string);
+            reader.onloadend = async () => {
+                const dataUrl = reader.result as string;
+                let localResults: FacialMetrics | undefined;
+
+                try {
+                    const faceMesh = await waitForFaceMesh();
+                    if (!faceMesh) {
+                        throw new Error("FaceMesh was not ready");
+                    }
+
+                    const image = new Image();
+                    image.src = dataUrl;
+                    await image.decode();
+
+                    landmarkSamplesRef.current = [];
+                    await faceMesh.send({ image });
+
+                    const landmarks = landmarkSamplesRef.current.at(-1);
+                    if (landmarks) {
+                        localResults = calculateLookmaxxingMetrics(landmarks);
+                    }
+                } catch (error) {
+                    console.error("Upload local analysis failed:", error);
+                }
+
+                onScan(dataUrl, localResults);
             };
             reader.readAsDataURL(file);
         }
@@ -283,7 +364,7 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                             {/* Facial Landmark Points */}
                             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                                 {faceMeshResults?.multiFaceLandmarks?.[0] ? (
-                                    faceMeshResults.multiFaceLandmarks[0].map((point: any, i: number) => (
+                                    faceMeshResults.multiFaceLandmarks[0].map((point, i) => (
                                         // only show key landmarks to avoid clutter (every 10th point)
                                         i % 12 === 0 && (
                                             <motion.div
