@@ -283,7 +283,7 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                     onClick={() => setMode("camera")}
                     className={cn(
                         "flex items-center gap-2 px-6 py-2.5 rounded-full transition-all font-bold text-sm tracking-wide",
-                        mode === "camera" ? "bg-primary text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "bg-white/5 text-white/40 hover:bg-white/10"
+                        mode === "camera" ? "bg-primary text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "bg-foreground/5 dark:bg-white/5 text-foreground/40 dark:text-white/40 hover:bg-foreground/10 dark:hover:bg-white/10"
                     )}
                 >
                     <Camera size={16} />
@@ -293,7 +293,7 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                     onClick={() => setMode("upload")}
                     className={cn(
                         "flex items-center gap-2 px-6 py-2.5 rounded-full transition-all font-bold text-sm tracking-wide",
-                        mode === "upload" ? "bg-primary text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "bg-white/5 text-white/40 hover:bg-white/10"
+                        mode === "upload" ? "bg-primary text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "bg-foreground/5 dark:bg-white/5 text-foreground/40 dark:text-white/40 hover:bg-foreground/10 dark:hover:bg-white/10"
                     )}
                 >
                     <Upload size={16} />
@@ -301,7 +301,7 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                 </button>
             </div>
 
-            <div className="relative aspect-square md:aspect-[4/3] glass-card overflow-hidden group border-white/5 bg-black">
+            <div className="relative aspect-square md:aspect-[4/3] glass-card overflow-hidden group border-foreground/5 dark:border-white/5 bg-black">
                 <AnimatePresence mode="wait">
                     {mode === "camera" ? (
                         <motion.div
@@ -452,7 +452,7 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                             </div>
                             <div className="space-y-2">
                                 <h3 className="text-2xl font-bold">Upload Portrait</h3>
-                                <p className="text-white/40 text-sm max-w-xs mx-auto">
+                                <p className="text-foreground/40 dark:text-white/40 text-sm max-w-xs mx-auto">
                                     For scientific precision, use a high-resolution front-facing portrait with neutral lighting.
                                 </p>
                             </div>
@@ -469,11 +469,11 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                                 onChange={handleFileUpload}
                                 className="hidden"
                             />
-                            <div className="flex items-center gap-6 pt-8 border-t border-white/5 w-full">
-                                <div className="flex-1 flex items-center justify-center gap-2 text-[10px] text-white/30 uppercase font-bold tracking-widest">
+                            <div className="flex items-center gap-6 pt-8 border-t border-foreground/5 dark:border-white/5 w-full">
+                                <div className="flex-1 flex items-center justify-center gap-2 text-[10px] text-foreground/30 dark:text-white/30 uppercase font-bold tracking-widest">
                                     <ShieldCheck size={14} /> Encrypted
                                 </div>
-                                <div className="flex-1 flex items-center justify-center gap-2 text-[10px] text-white/30 uppercase font-bold tracking-widest">
+                                <div className="flex-1 flex items-center justify-center gap-2 text-[10px] text-foreground/30 dark:text-white/30 uppercase font-bold tracking-widest">
                                     <Target size={14} /> AI Analysis
                                 </div>
                             </div>
@@ -495,12 +495,12 @@ export default function Scanner({ onScan, isProcessing }: ScannerProps) {
                             <Zap size={22} fill="currentColor" className="text-yellow-400 group-hover:animate-bounce" />
                             <span className="text-lg font-black tracking-widest">ANALYZE NOW</span>
                         </div>
-                        <span className="text-[9px] font-bold text-white/40 tracking-[0.3em] mt-1 relative z-10">START NEURAL COMPUTATION</span>
+                        <span className="text-[9px] font-bold text-white/40 tracking-[0.3em] mt-1 relative z-10 uppercase">Start Neural Computation</span>
                     </motion.button>
                 )}
             </div>
 
-            <p className="text-center text-[10px] text-white/20 uppercase tracking-[0.3em] font-bold">
+            <p className="text-center text-[10px] text-foreground/20 dark:text-white/20 uppercase tracking-[0.3em] font-bold">
                 Facial Mapping Intelligence v4.0.2 • Secure Processing Active
             </p>
         </div>

@@ -119,7 +119,7 @@ export default function AnalysisResults({ results }: AnalysisResultsProps) {
                             stroke="currentColor"
                             strokeWidth="6"
                             fill="transparent"
-                            className="text-white/5"
+                            className="text-foreground/5 dark:text-white/5"
                         />
                         <motion.circle
                             cx="88"
@@ -148,12 +148,12 @@ export default function AnalysisResults({ results }: AnalysisResultsProps) {
                         <div className="px-3 py-1 bg-primary text-foreground text-[10px] font-black uppercase tracking-widest rounded-md">
                             Neural Tier
                         </div>
-                        <div className="h-px w-12 bg-white/10" />
+                        <div className="h-px w-12 bg-foreground/10 dark:bg-white/10" />
                         <span className="text-foreground/40 text-xs font-bold uppercase tracking-widest flex items-center gap-1">
                             <Activity size={14} /> Confidence: {results.confidenceScore}%
                         </span>
                     </div>
-                    <h2 className="text-4xl font-black tracking-tight leading-none bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+                    <h2 className="text-4xl font-black tracking-tight leading-none bg-gradient-to-r from-foreground to-foreground/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
                         {results.title}
                     </h2>
                     <div className="space-y-2">
@@ -232,7 +232,7 @@ export default function AnalysisResults({ results }: AnalysisResultsProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Metrics Grid */}
                 <div className="md:col-span-2 space-y-8">
-                    <div className="glass-card p-8 border-foreground/5 bg-gradient-to-br from-white/[0.03] to-transparent">
+                    <div className="glass-card p-8 border-foreground/5 bg-gradient-to-br from-foreground/[0.03] dark:from-white/[0.03] to-transparent">
                         <h3 className="text-sm font-black uppercase tracking-[0.3em] mb-8 flex items-center gap-3 text-foreground/40">
                             <Target size={18} className="text-primary" /> Structural Metrics
                         </h3>
@@ -428,7 +428,7 @@ export default function AnalysisResults({ results }: AnalysisResultsProps) {
                                         })}
                                 </div>
 
-                                <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
+                                <div className="pt-8 border-t border-foreground/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
                                     <div className="flex items-center gap-4 text-foreground/40 text-xs font-medium italic">
                                         <Info size={14} className="text-primary" />
                                         Recommendations are based on geometric symmetry and average aesthetic proportions.
