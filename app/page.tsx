@@ -24,28 +24,27 @@ export default function Home() {
 
   useEffect(() => {
     const sections = ["hero", "features", "how-it-works", "privacy"];
-    const observers = sections.map(id => {
-      const element = document.getElementById(id);
-      if (!element) return null;
-
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setActiveSection(id);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.1) {
+            setActiveSection(entry.target.id);
           }
-        },
-        {
-          threshold: 0.1,
-          rootMargin: "-20% 0px -70% 0px"
-        }
-      );
+        });
+      },
+      {
+        threshold: [0.1, 0.5],
+        rootMargin: "-20% 0px -60% 0px"
+      }
+    );
 
-      observer.observe(element);
-      return observer;
+    sections.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
     });
 
     return () => {
-      observers.forEach(observer => observer?.disconnect());
+      observer.disconnect();
     };
   }, []);
 
@@ -331,7 +330,7 @@ export default function Home() {
               </section>
 
               {/* How It Works Section */}
-              <section id="how-it-works" className="space-y-16 py-12">
+              <section id="how-it-works" className="space-y-16 py-12 scroll-mt-32">
                 <div className="text-center space-y-4">
                   <h2 className="text-4xl font-bold">How It Works</h2>
                   <p className="text-foreground/40 dark:text-white/40">Sophisticated analysis in three simple steps.</p>
