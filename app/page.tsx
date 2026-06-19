@@ -13,6 +13,8 @@ import { useTheme } from "@/components/ThemeProvider";
 import Scanner from "@/components/Scanner";
 import AnalysisResults from "@/components/AnalysisResults";
 import { cn } from "@/lib/utils";
+import { FacialMetrics } from "@/lib/facial-analysis";
+
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
