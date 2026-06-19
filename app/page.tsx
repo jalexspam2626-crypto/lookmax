@@ -7,20 +7,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Scan, Sparkles, BrainCircuit, ShieldCheck, ArrowLeft,
   Target, Zap, Maximize, Smartphone, Cpu, FileText,
-  Lock, EyeOff, Upload, CheckCircle2, Info, Sun, Moon, Activity
+  Lock, EyeOff, Upload, CheckCircle2, Info, Sun, Moon
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import Scanner from "@/components/Scanner";
 import AnalysisResults from "@/components/AnalysisResults";
+import { FacialMetrics } from "@/lib/facial-analysis";
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<React.ComponentProps<typeof AnalysisResults>["results"] | null>(null);
   const [hasScanned, setHasScanned] = useState(false);
   const scannerRef = useRef<HTMLDivElement>(null);
 
-  const handleScan = async (image: string, localResults?: any) => {
+  const handleScan = async (image: string, localResults?: FacialMetrics) => {
     setIsProcessing(true);
     setHasScanned(true);
 
@@ -31,12 +32,13 @@ export default function Home() {
         title: "Analyzing Structure...",
         tierMeaning: "Calculating aesthetic geometry...",
         summary: "Live spatial mapping complete. Synchronizing with neural processing...",
-        confidenceScore: 92,
+        confidenceScore: localResults.confidenceScore ?? 92,
+        qualityWarnings: localResults.qualityWarnings ?? [],
         metrics: [
           { label: "Jawline Definition", value: localResults.jawlineDefinition > 80 ? "Sharp" : "Soft", numericalValue: `${Math.round(localResults.jawlineDefinition)}%`, score: Math.round(localResults.jawlineDefinition), percentile: 72, coords: { x: 50, y: 85 } },
           { label: "Eye Symmetry", value: localResults.symmetry > 95 ? "High" : "Average", numericalValue: `${Math.round(localResults.symmetry)}%`, score: Math.round(localResults.symmetry), percentile: 88, coords: { x: 50, y: 35 } },
-          { label: "Canthal Tilt", value: localResults.canthalTilt > 0 ? "Positive" : "Neutral", numericalValue: `${localResults.canthalTilt.toFixed(1)}°`, score: 75 + localResults.canthalTilt * 2, percentile: 65, coords: { x: 35, y: 35 } },
-          { label: "Mid-face Ratio", value: localResults.midFaceRatio.toFixed(2), numericalValue: localResults.midFaceRatio.toFixed(2), score: 85, percentile: 78, coords: { x: 50, y: 55 } },
+          { label: "Canthal Tilt", value: localResults.canthalTilt > 0 ? "Positive" : "Neutral", numericalValue: `${localResults.canthalTilt.toFixed(1)}°`, score: Math.round(localResults.canthalTiltScore), percentile: 65, coords: { x: 35, y: 35 } },
+          { label: "Mid-face Ratio", value: localResults.midFaceRatio.toFixed(2), numericalValue: localResults.midFaceRatio.toFixed(2), score: Math.round(localResults.midFaceScore), percentile: 78, coords: { x: 50, y: 55 } },
         ],
         pros: ["Strong spatial symmetry detected", "Defined facial thirds"],
         cons: ["Processing deeper neural insights..."],
